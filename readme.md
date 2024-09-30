@@ -9,3 +9,7 @@ Usage: `python create_DSM.py input_file output_file matrix`
 
 Values in the Process-Process matrix represent the number of common Objects between the two processes.
 The inverse is true for the Object-Object matrix.
+
+Dependencies:
+- [numpy](https://numpy.org/)
+- [pandas](https://pandas.pydata.org/)
