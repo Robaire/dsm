@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import pandas as pd
+from sklearn.cluster import SpectralClustering
 
 # Parse arguments
 parser = argparse.ArgumentParser(
@@ -9,6 +10,14 @@ parser = argparse.ArgumentParser(
 parser.add_argument("input", help="Input OPL file", type=open)
 parser.add_argument("output", help="Output file")
 parser.add_argument("matrix", choices=["PO", "PP", "OO"], help="Desired output matrix")
+parser.add_argument(
+    "-n",
+    "--n_clusters",
+    help="The number of clusters to form",
+    type=int,
+    dest="n_clusters",
+    default=8,
+)
 args = parser.parse_args()
 
 
@@ -110,6 +119,39 @@ for r in relations:
 # Compute the Process-Process Matrix
 pp = pd.DataFrame(np.dot(po_num, po_num.transpose()), processes, processes)
 
+# Compute the Object-Obejct Matrix
+oo = pd.DataFrame(np.dot(po_num.transpose(), po_num), objects, objects)
+
+# Compute cluster matrices
+object_clustering = SpectralClustering(
+    random_state=2024, n_clusters=args.n_clusters, affinity="precomputed"
+).fit(oo)
+process_clustering = SpectralClustering(
+    random_state=2024, n_clusters=args.n_clusters, affinity="precomputed"
+).fit(pp)
+
+# Rearrange PO matrix according to the clustering
+# TODO: Do this by rearrange the PO matrix instead
+print(f"Object Clusters: {np.sort(object_clustering.labels_)}")
+print(f"Process Clusters: {np.sort(process_clustering.labels_)}")
+objects = objects[object_clustering.labels_.argsort()]
+processes = processes[process_clustering.labels_.argsort()]
+
+# Recommpute other matrices
+po = pd.DataFrame(
+    np.empty((len(processes), len(objects)), dtype="object"), processes, objects
+)
+po_num = pd.DataFrame(np.zeros((len(processes), len(objects))), processes, objects)
+
+# Iterate over all the relations and build the Process-Object Matrix
+for r in relations:
+    po.loc[r.process, r.object] = r.keyword[0]  # store a letter noting the relationship
+    po_num.loc[r.process, r.object] = (
+        1  # write a one for doing matrix multiplication later
+    )
+
+# Compute the Process-Process Matrix
+pp = pd.DataFrame(np.dot(po_num, po_num.transpose()), processes, processes)
 # Compute the Object-Obejct Matrix
 oo = pd.DataFrame(np.dot(po_num.transpose(), po_num), objects, objects)
 
