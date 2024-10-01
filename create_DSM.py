@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import pandas as pd
+import csv
 from sklearn.cluster import SpectralClustering
 
 # Parse arguments
@@ -132,8 +133,12 @@ process_clustering = SpectralClustering(
 
 # Rearrange PO matrix according to the clustering
 # TODO: Do this by rearrange the PO matrix instead
-print(f"Object Clusters: {np.sort(object_clustering.labels_)}")
-print(f"Process Clusters: {np.sort(process_clustering.labels_)}")
+# TODO: Write the cluster labels to a seperate CSV
+with open("clusters.csv", "w", newline="") as cluster_file:
+    out = csv.writer(cluster_file)
+    out.writerow(np.sort(object_clustering.labels_))
+    out.writerow(np.sort(process_clustering.labels_))
+
 objects = objects[object_clustering.labels_.argsort()]
 processes = processes[process_clustering.labels_.argsort()]
 
