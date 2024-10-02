@@ -171,26 +171,6 @@ if args.n_clusters > 0:
     pp = pd.DataFrame(np.dot(po_num, po_num.transpose()), processes, processes)
     oo = pd.DataFrame(np.dot(po_num.transpose(), po_num), objects, objects)
 
-"""
-# Recommpute other matrices
-po = pd.DataFrame(
-    np.empty((len(processes), len(objects)), dtype="object"), processes, objects
-)
-po_num = pd.DataFrame(np.zeros((len(processes), len(objects))), processes, objects)
-
-# Iterate over all the relations and build the Process-Object Matrix
-for r in relations:
-    po.loc[r.process, r.object] = r.keyword[0]  # store a letter noting the relationship
-    po_num.loc[r.process, r.object] = (
-        1  # write a one for doing matrix multiplication later
-    )
-
-# Compute the Process-Process Matrix
-pp = pd.DataFrame(np.dot(po_num, po_num.transpose()), processes, processes)
-# Compute the Object-Obejct Matrix
-oo = pd.DataFrame(np.dot(po_num.transpose(), po_num), objects, objects)
-"""
-
 print("Processed:")
 print(f"{len(objects)} objects")
 print(f"{len(processes)} processes")
