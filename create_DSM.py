@@ -1,6 +1,8 @@
 import argparse
 import numpy as np
 import pandas as pd
+import csv
+from sklearn.cluster import SpectralClustering
 
 # Parse arguments
 parser = argparse.ArgumentParser(
@@ -9,6 +11,25 @@ parser = argparse.ArgumentParser(
 parser.add_argument("input", help="Input OPL file", type=open)
 parser.add_argument("output", help="Output file")
 parser.add_argument("matrix", choices=["PO", "PP", "OO"], help="Desired output matrix")
+parser.add_argument(
+    "-n",
+    "--n_clusters",
+    help="The number of clusters to form",
+    type=int,
+    dest="n_clusters",
+    default=0,
+)
+parser.add_argument(
+    "-s",
+    "--seed",
+    help="RNG seed for deterministic clustering",
+    type=int,
+    dest="seed",
+    default=None,
+)
+parser.add_argument(
+    "-c", "--clusters", help="Write cluster labels to this location", dest="clusters"
+)
 args = parser.parse_args()
 
 
@@ -107,11 +128,68 @@ for r in relations:
         1  # write a one for doing matrix multiplication later
     )
 
+# Compute the matrices
+pp = pd.DataFrame(np.dot(po_num, po_num.transpose()), processes, processes)
+oo = pd.DataFrame(np.dot(po_num.transpose(), po_num), objects, objects)
+
+# If we want to cluster
+if args.n_clusters > 0:
+
+    # Cluster matrices
+    o_cluster = SpectralClustering(
+        random_state=args.seed, n_clusters=args.n_clusters, affinity="precomputed"
+    ).fit(oo)
+    p_cluster = SpectralClustering(
+        random_state=args.seed, n_clusters=args.n_clusters, affinity="precomputed"
+    ).fit(pp)
+
+    # If desired, write the clusters to a file
+    if args.clusters:
+        with open(args.clusters, "w", newline="") as cluster_file:
+            out = csv.writer(cluster_file)
+            out.writerow(np.concat((["Objects"], np.sort(o_cluster.labels_))))
+            out.writerow(np.concat((["Proesses"], np.sort(p_cluster.labels_))))
+
+    # Rearrange the matrices
+    processes = processes[p_cluster.labels_.argsort()]
+    objects = objects[o_cluster.labels_.argsort()]
+
+    po = pd.DataFrame(
+        po.to_numpy()[np.ix_(p_cluster.labels_.argsort(), o_cluster.labels_.argsort())],
+        processes,
+        objects,
+    )
+    po_num = pd.DataFrame(
+        po_num.to_numpy()[
+            np.ix_(p_cluster.labels_.argsort(), o_cluster.labels_.argsort())
+        ],
+        processes,
+        objects,
+    )
+
+    # Recompute the matrices
+    pp = pd.DataFrame(np.dot(po_num, po_num.transpose()), processes, processes)
+    oo = pd.DataFrame(np.dot(po_num.transpose(), po_num), objects, objects)
+
+"""
+# Recommpute other matrices
+po = pd.DataFrame(
+    np.empty((len(processes), len(objects)), dtype="object"), processes, objects
+)
+po_num = pd.DataFrame(np.zeros((len(processes), len(objects))), processes, objects)
+
+# Iterate over all the relations and build the Process-Object Matrix
+for r in relations:
+    po.loc[r.process, r.object] = r.keyword[0]  # store a letter noting the relationship
+    po_num.loc[r.process, r.object] = (
+        1  # write a one for doing matrix multiplication later
+    )
+
 # Compute the Process-Process Matrix
 pp = pd.DataFrame(np.dot(po_num, po_num.transpose()), processes, processes)
-
 # Compute the Object-Obejct Matrix
 oo = pd.DataFrame(np.dot(po_num.transpose(), po_num), objects, objects)
+"""
 
 print("Processed:")
 print(f"{len(objects)} objects")
