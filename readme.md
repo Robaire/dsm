@@ -1,16 +1,16 @@
-Usage: `python create_DSM.py input_file output_file matrix`
+A tool to generate a [Design Structure Matrix](https://en.wikipedia.org/wiki/Design_structure_matrix) from an [Object Process Model](https://en.wikipedia.org/wiki/Object_Process_Methodology) graph.
 
-- `input_file` must be a syntactically correct OPL text file
-- `output_file` is a file path for the output CSV
-- `matrix` must be one of:
-    - `PO`: Process-Object
-    - `PP`: Process-Process
-    - `OO`: Object-Object
-- `-n, --n_clusters`: The number of clusters to use (default is 8)
+Usage: `python create_DSM.py --help`
 
 Values in the Process-Process matrix represent the number of common Objects between the two processes.
 The inverse is true for the Object-Object matrix.
 
+By default the output is ordered alphabetically.
+Alternatively the output can be clustered using [spectral clustering](https://en.wikipedia.org/wiki/Spectral_clustering).
+Cluster labels can be saved as a separate output. 
+If an arbitrary ordering of the output is desired a file containing all the elements in the preferred order can be provided as an input.
+
 Dependencies:
 - [numpy](https://numpy.org/)
 - [pandas](https://pandas.pydata.org/)
+- [scikit-learn](https://scikit-learn.org/)
