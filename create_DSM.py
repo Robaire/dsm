@@ -3,8 +3,9 @@ import numpy as np
 import pandas as pd
 import csv
 from sklearn.cluster import SpectralClustering
+from dataclasses import dataclass
 
-# Parse arguments
+# Build the argument parser
 parser = argparse.ArgumentParser(
     prog="DSM Builder", description="Builds elements of a DSM from an OPL text file."
 )
@@ -12,6 +13,28 @@ parser.add_argument("input", help="Input OPL file", type=open)
 parser.add_argument("output", help="Output file")
 parser.add_argument("matrix", choices=["PO", "PP", "OO"], help="Desired output matrix")
 parser.add_argument(
+    "-s",
+    "--seed",
+    help="RNG seed for deterministic clustering, ignored if -n is not set",
+    type=int,
+    dest="seed",
+    default=None,
+)
+parser.add_argument(
+    "-c",
+    "--clusters",
+    help="Write cluster labels to this location, ignored if -n is not set",
+    dest="clusters",
+)
+
+exclusive = parser.add_mutually_exclusive_group()
+exclusive.add_argument(
+    "-o",
+    "--order",
+    help="A file with preferred element ordering. Elements can be seperated with newlines or commas",
+    dest="order",
+)
+exclusive.add_argument(
     "-n",
     "--n_clusters",
     help="The number of clusters to form",
@@ -19,25 +42,17 @@ parser.add_argument(
     dest="n_clusters",
     default=0,
 )
-parser.add_argument(
-    "-s",
-    "--seed",
-    help="RNG seed for deterministic clustering",
-    type=int,
-    dest="seed",
-    default=None,
-)
-parser.add_argument(
-    "-c", "--clusters", help="Write cluster labels to this location", dest="clusters"
-)
+
+
+# Parse arguments
 args = parser.parse_args()
 
 
+@dataclass
 class Relation:
-    def __init__(self, object, keyword, process):
-        self.object = object
-        self.keyword = keyword
-        self.process = process
+    object: str
+    keyword: str
+    process: str
 
 
 # Essentially the OPL contains the following information
@@ -110,6 +125,35 @@ for line in args.input.readlines(False):
 objects = np.unique(np.array(objects, dtype="object"))
 processes = np.unique(np.array(processes, dtype="object"))
 
+# If there is a preferred ordering
+if args.order:
+    # Read the ordering file
+    with open(args.order, "r", newline="") as ordering_file:
+        ordering = np.array(
+            [
+                x.strip()
+                for x in ordering_file.read().replace("\n", ",").split(",")
+                if x != ""
+            ],
+            dtype="object",
+        )
+
+        if args.matrix == "OO":
+            # Check that it has all the same objects
+            if (objects == np.sort(ordering)).all():
+                objects = ordering
+            else:
+                print("Provided ordering does not have the same Objects as the OPL")
+                exit()
+
+        if args.matrix == "PP":
+            if (processes == np.sort(ordering)).all():
+                processes = ordering
+            else:
+                print("Provided ordering does not have the same Processes as the OPL")
+                exit()
+
+
 # Check to make sure there is at least one object and process
 if len(objects) == 0 or len(processes) == 0:
     print("Invalid input, exiting.")
@@ -131,6 +175,7 @@ for r in relations:
 # Compute the matrices
 pp = pd.DataFrame(np.dot(po_num, po_num.transpose()), processes, processes)
 oo = pd.DataFrame(np.dot(po_num.transpose(), po_num), objects, objects)
+
 
 # If we want to cluster
 if args.n_clusters > 0:
