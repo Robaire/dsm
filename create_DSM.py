@@ -1,3 +1,12 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "numpy",
+#     "pandas",
+#     "scikit-learn",
+# ]
+# ///
+
 import argparse
 import numpy as np
 import pandas as pd
@@ -71,7 +80,6 @@ relations = []
 
 # Parse the input file
 for line in args.input.readlines(False):
-
     # Incase the input has empty lines
     if line.find(".") == -1:
         continue
@@ -92,7 +100,6 @@ for line in args.input.readlines(False):
     # Check if this line is a "handles" relationship
     # Object(s)-"handles"-Process
     if line.find(" handles ") != -1:
-
         # Split on the keyword
         l = line.split(" handles ")
         process = l[1].strip()
@@ -108,10 +115,8 @@ for line in args.input.readlines(False):
     # Process-Keyword-Object(s)
     keywords = ["affects", "requires", "yields", "consumes"]
     for keyword in keywords:
-
         # Check if the keyword exists
         if line.find(keyword) != -1:
-
             # Split on the keyword
             l = line.split(keyword)
             process = l[0].strip()
@@ -179,7 +184,6 @@ oo = pd.DataFrame(np.dot(po_num.transpose(), po_num), objects, objects)
 
 # If we want to cluster
 if args.n_clusters > 0:
-
     # Cluster matrices
     o_cluster = SpectralClustering(
         random_state=args.seed, n_clusters=args.n_clusters, affinity="precomputed"
@@ -223,7 +227,6 @@ print(f"{len(relations)} relationships")
 
 # Save the results as a CSV
 with open(args.output, "w", newline="") as output_file:
-
     print(f"Writing {args.matrix} matrix to {args.output}")
 
     if args.matrix == "PO":
